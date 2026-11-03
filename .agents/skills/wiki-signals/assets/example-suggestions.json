@@ -1,0 +1,51 @@
+{
+  "page": "Albert Einstein",
+  "language": "en",
+  "generatedAt": "2026-04-28T11:00:00Z",
+  "suggestions": [
+    {
+      "id": "cite-1",
+      "type": "citation",
+      "severity": "warning",
+      "excerpt": "Einstein won the Nobel Prize in 1921.",
+      "range": { "start": 240, "end": 282 },
+      "message": "This claim might need a citation.",
+      "detail": "Verifiable historical claims about award years usually require a reliable source. See WP:V.",
+      "actions": [
+        { "id": "accept", "label": "Add citation", "variant": "progressive" },
+        { "id": "dismiss", "label": "Dismiss" },
+        { "id": "explain", "label": "Why?", "variant": "quiet" }
+      ],
+      "source": "rule",
+      "confidence": 0.83
+    },
+    {
+      "id": "wikify-1",
+      "type": "wikifying",
+      "severity": "info",
+      "excerpt": "general theory of relativity",
+      "message": "Link to the article on \"general theory of relativity\".",
+      "actions": [
+        { "id": "accept", "label": "Link it", "variant": "progressive" },
+        { "id": "dismiss", "label": "Dismiss" }
+      ],
+      "source": "model",
+      "confidence": 0.91
+    },
+    {
+      "id": "tone-1",
+      "type": "tone",
+      "severity": "warning",
+      "excerpt": "the most brilliant scientist of all time",
+      "message": "Avoid superlative claims without sourcing.",
+      "detail": "Wikipedia's neutral point of view policy discourages unsourced superlatives. Consider attributing the claim or rewording it.",
+      "actions": [
+        { "id": "accept", "label": "Reword", "variant": "progressive" },
+        { "id": "dismiss", "label": "Keep as-is" },
+        { "id": "explain", "label": "Why?", "variant": "quiet" }
+      ],
+      "source": "model",
+      "confidence": 0.74
+    }
+  ]
+}

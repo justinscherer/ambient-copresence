@@ -1,0 +1,79 @@
+# ProtoWiki integration
+
+How the agnostic API guidance in [`wiki-apis`](../SKILL.md) lands inside
+the ProtoWiki repo specifically — which components already wrap which
+endpoints, and how to refresh the committed schema snapshots.
+
+## Components that already hit the API
+
+| Component | API | Notes |
+| --- | --- | --- |
+| `ArticleLive` | REST `/page/html/{title}` (+ Action `query` with `pageimages\|description` when **`app`**) | **`ArticleWrapper`** + **`ArticleRenderer`**; **`ArticleRenderer`** mounts when fetch supplies HTML or **`#default`** is passed (**`null`** fetch state omits **`ArticleRenderer`**). **`lang`** / **`dir`** passthrough unchanged. Host derives from **`lang`** (so **`en.wikipedia.org`** by default); **`host`** overrides. **`app`** adds the lead-block metadata fetch. |
+| `ArticleCustom` | (none) | **`ArticleWrapper` → `ArticleRenderer`**; hand-authored **`#default`** markup. |
+| `Search` | Action `?action=opensearch` | Debounced + `AbortController`-cancelled. Defaults to `en.wikipedia.org`; takes a `host` prop. |
+
+**No API:** **`ArticleCustom`** (or **`ArticleWrapper`** + **`ArticleRenderer`**) with a hand-filled **`#default`** slot does not call REST or Action APIs. Use that when live fetch is wrong — see [`protowiki-components` → `article.md`](../../protowiki-components/references/article.md#hand-authored-article-markup-no-live-fetch).
+
+If you find yourself reaching for `fetch` directly to one of these
+endpoints, use the component instead — they already do the etiquette
+work (UA, cancellation, error handling).
+
+## `page/html`, not `mobile-html`
+
+In-app article screens (**`<ArticleLive app>`**) read the same REST
+**`page/html`** as the web ones and apply the app-style transforms in
+**`ArticleRenderer`**. REST **`page/mobile-html`** / PCS was tried and reverted:
+it only renders correctly in a document of its own, and an iframe puts the
+article beyond the reach of ProtoWiki CSS, Codex components and devtools —
+the opposite of what prototypes need. Full reasoning in
+[`protowiki-components` → `article.md`](../../protowiki-components/references/article.md#do-not-use-rest-pagemobile-html--pcs-here);
+the app platform overall is
+[`protowiki-app-prototyping`](../../protowiki-app-prototyping/SKILL.md).
+
+## User-Agent
+
+Canonical value: **`src/api-user-agent.txt`** (kept in sync with
+`PROTOWIKI_API_USER_AGENT` in `src/config.ts` /
+`wikimediaApiFetchHeaders()`). Bash scripts
+`source scripts/api-user-agent.sh` and set `UA="$PROTOWIKI_API_USER_AGENT"`.
+
+For cross-origin `fetch` from ProtoWiki, pass
+`wikimediaApiFetchHeaders('<purpose>')` (e.g. `opensearch`, `page-html`,
+`user-impact`) so Wikimedia can identify the client via `Api-User-Agent`.
+
+## Never hit `action=edit` from a prototype
+
+Do not POST edits to a real wiki from ProtoWiki routes. Demonstrate the
+publish *flow* with mocked handlers (toast, `console`, emit). For VisualEditor-shaped
+chrome, fork **[Bárbara Martínez Calvo’s article template and suggestion-mode repos](https://github.com/bmartinezcalvo/wikipedia-article-template)** (details in [`editors.md`](../../protowiki-components/references/editors.md)) rather than wiring real edit APIs here.
+Suggestion-overlay payloads alongside your surface are documented in
+[`protowiki-components` → `edit-suggestions.md`](../../protowiki-components/references/edit-suggestions.md).
+
+## Refreshing committed API schema snapshots
+
+ProtoWiki ships a snapshotter at
+`.agents/skills/wiki-apis/assets/fetch_schemas.sh` that writes **four**
+REST OpenAPI specs (one per major deployment / host) plus the Action API
+`paraminfo` for the modules ProtoWiki cares about into
+`.agents/skills/wiki-apis/assets/snapshots/`.
+
+```bash
+bash .agents/skills/wiki-apis/assets/fetch_schemas.sh
+ls .agents/skills/wiki-apis/assets/snapshots/
+# rest-api-spec.wikipedia.json   rest-api-spec.wikimedia-org.json
+# rest-api-spec.commons.json     rest-api-spec.wikidata.json
+# action-api-paraminfo.json
+```
+
+See [`references/schemas.md`](schemas.md) for the layout and `jq`
+recipes to navigate the files. The script is portable on its own — if
+you copy this skill to another repo, the script keeps working there
+too; only the snapshot paths change.
+
+## See also
+
+- [`wiki-apis`](../SKILL.md) — the agnostic API guidance.
+- [`protowiki-components`](../../protowiki-components/SKILL.md) — for
+  what `ArticleWrapper`, `ArticleRenderer`, `ArticleLive`, `ArticleCustom`, and `Search` expose.
+- [`wiki-snapshot-data`](../../wiki-snapshot-data/SKILL.md) — when not
+  to fetch live at all.

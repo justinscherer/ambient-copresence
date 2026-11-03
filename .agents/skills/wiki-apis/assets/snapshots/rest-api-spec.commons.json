@@ -1,0 +1,168 @@
+{
+  "components": {
+    "schemas": {
+      "caption_recommendation_result": {
+        "description": "list of candidates for caption addition or translation",
+        "items": {
+          "properties": {
+            "globalusage": {
+              "description": "pages using this image on the source or target wiki, by language",
+              "type": "object"
+            },
+            "mime": {
+              "description": "the MIME type of the file",
+              "type": "string"
+            },
+            "ns": {
+              "description": "numeric page namespace (should always be 6)",
+              "type": "integer"
+            },
+            "pageid": {
+              "description": "wiki page id",
+              "type": "integer"
+            },
+            "structured": {
+              "description": "structured data from Structured Data on Commons",
+              "properties": {
+                "captions": {
+                  "description": "captions, by language, from Structured Data on Commons",
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "title": {
+              "description": "page title (with namespace prefix)",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "the Wikimedia Services team",
+      "url": "http://mediawiki.org/wiki/Wikimedia_REST_API"
+    },
+    "description": "This API provides cacheable and straightforward access to Wikimedia content and data, in machine-readable formats.\n### Global Rules\n- Limit your clients to no more than 200 requests/s to this API.\n  Each API endpoint's documentation may detail more specific usage limits.\n- Set a unique `User-Agent` or `Api-User-Agent` header that\n  allows us to contact you quickly. Email addresses or URLs\n  of contact pages work well.\n\nBy using this API, you agree to Wikimedia's [Terms of Use](https://wikimediafoundation.org/wiki/Terms_of_Use) and [Privacy Policy](https://wikimediafoundation.org/wiki/Privacy_policy). Unless otherwise specified in the endpoint documentation below, content accessed via this API is licensed under the [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) and [GFDL](https://www.gnu.org/copyleft/fdl.html) licenses, and you irrevocably agree to release modifications or additions made through this API under these licenses. Check the [Wikimedia REST API documentation](https://www.mediawiki.org/wiki/Wikimedia_REST_API) for background and details.\n### Endpoint documentation\nPlease consult each endpoint's documentation for details on:\n- Licensing information for the specific type of content\n  and data served via the endpoint.\n- Stability markers to inform you about development status and\n  change policy, according to\n  [our API version policy](https://www.mediawiki.org/wiki/API_versioning).\n- Endpoint specific usage limits.\n",
+    "license": {
+      "name": "Apache2",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    },
+    "termsOfService": "https://wikimediafoundation.org/wiki/Terms_of_Use",
+    "title": "Wikimedia REST API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/data/recommendation/caption/addition/{target}": {
+      "get": {
+        "parameters": [
+          {
+            "description": "The target wiki language code for suggestions",
+            "in": "path",
+            "name": "target",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/caption_recommendation_result"
+                }
+              }
+            },
+            "description": "list of candidates for caption addition"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/problem"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Recommend files missing a caption (label) in the target language",
+        "tags": [
+          "Recommendation"
+        ],
+        "x-monitor": false
+      }
+    },
+    "/data/recommendation/caption/translation/from/{source}/to/{target}": {
+      "get": {
+        "parameters": [
+          {
+            "description": "The source wiki language code for suggestions",
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The target wiki language code for suggestions",
+            "in": "path",
+            "name": "target",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/caption_recommendation_result"
+                }
+              }
+            },
+            "description": "list of candidates for caption translation"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/problem"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Recommend files with a caption (label) in the source language but missing one in the target language",
+        "tags": [
+          "Recommendation"
+        ],
+        "x-monitor": false
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/rest_v1"
+    }
+  ],
+  "tags": [
+    {
+      "description": "contribution recommendations",
+      "name": "Recommendation"
+    }
+  ],
+  "x-default-params": {},
+  "x-host-basePath": "/api/rest_v1"
+}

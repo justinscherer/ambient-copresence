@@ -1,0 +1,46 @@
+{
+  "name": "protowiki",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Tools, strategies, frameworks and resources for prototyping MediaWiki projects.",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/build-codex-variants.mjs",
+    "build:vite": "vite build",
+    "build:variants": "node scripts/build-codex-variants.mjs",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,vue,css}\"",
+    "lint": "eslint . --ext .ts,.vue",
+    "snapshot:wiki-skins": "bash scripts/snapshot-wiki-skins.sh",
+    "prepare": "node scripts/ensure-githooks.mjs",
+    "postinstall": "node scripts/apply-codex-patch.mjs",
+    "codex:use-stock": "node scripts/codex.mjs stock",
+    "codex:use-patch": "node scripts/codex.mjs patched",
+    "codex:patch": "node scripts/patch-codex.mjs",
+    "codex:reset": "node scripts/patch-codex.mjs --reset"
+  },
+  "dependencies": {
+    "@wikimedia/codex": "^2.7.0",
+    "@wikimedia/codex-design-tokens": "^2.7.0",
+    "@wikimedia/codex-icons": "^2.7.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@vue/eslint-config-typescript": "^14.0.0",
+    "diff": "^9.0.0",
+    "eslint": "^9.16.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "postcss": "^8.5.12",
+    "postcss-prefix-selector": "^2.1.1",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "unplugin-vue-router": "^0.10.0",
+    "vite": "^6.0.0",
+    "vue-tsc": "^2.2.0"
+  }
+}

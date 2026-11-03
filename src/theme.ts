@@ -1,0 +1,250 @@
+import { ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
+
+import lightTokensRaw from '@wikimedia/codex-design-tokens/theme-wikimedia-ui.css?raw'
+import darkTokensRaw from '@wikimedia/codex-design-tokens/theme-wikimedia-ui-mode-dark.css?raw'
+
+import { protowikiConfig } from '@/appearance'
+import { getCodexPatchChangeId } from '@/codex-build'
+import type { ConfigTheme, ConfigWebSkin } from '@/config'
+
+export type Skin = 'desktop' | 'mobile'
+export type Theme = 'light' | 'dark'
+
+/**
+ * When **`ArticleLive`**, **`ArticleCustom`**, **`ArticleWrapper`**, **`ArticleRenderer`**, or **`SpecialPageWrapper`** sit inside **`ChromeWrapper`**,
+ * they inherit `effectiveSkin` via Vue inject so columns match chrome without
+ * repeating `skin` on every child (embedded mobile previews still work).
+ */
+export const PROTOWIKI_CHROME_SKIN: InjectionKey<ComputedRef<Skin>> =
+  Symbol('protowiki-chrome-skin')
+
+export const PROTOWIKI_CHROME_THEME: InjectionKey<ComputedRef<Theme>> =
+  Symbol('protowiki-chrome-theme')
+
+/**
+ * Viewport threshold for Vector vs Minerva **skin** (global `data-skin`).
+ * Matches FakeMediaWiki `SpecialView/style.css`: `.nav-desktop` vs `.nav-mobile`
+ * swap at **640px** — desktop chrome stays until the viewport is phone-sized.
+ *
+ * **1120px** is a separate concern: `VectorChromeHeader.vue` still hides inline search
+ * below that width while remaining on desktop skin (same as FakeMediaWiki’s
+ * `.nav-item-search` / `.nav-button-search` toggle).
+ */
+const DESKTOP_MIN_WIDTH = 640
+
+/**
+ * Inject the Codex design-token files into the page, scoped to
+ * [data-theme="light"] and [data-theme="dark"] selectors instead of `:root`.
+ *
+ * This is what makes per-subtree theme overrides work: a `<div data-theme="dark">`
+ * deep inside a light page re-applies the dark token set to itself, and the
+ * Codex CSS custom-property cascade does the rest. Codex ships these tokens
+ * as `:root` rules (always-on); we just rewrite the selector at runtime so
+ * they cascade off `data-theme` instead.
+ *
+ * **Dark theme uses two stacked injections.** `theme-wikimedia-ui-mode-dark.css`
+ * only overrides colours (no typography/spacing). Upstream stacks base + dark on
+ * the same `:root`; we mirror that with `[data-theme="dark"]` ×2 — full light
+ * tokens first, then palette overrides — so `--font-size-*`, `--spacing-*`, etc.
+ * stay defined under dark mode.
+ */
+function injectThemedTokens(): void {
+  if (typeof document === 'undefined') return
+
+  const inject = (raw: string, selector: string, id: string) => {
+    if (document.getElementById(id)) return
+    const scoped = raw.replace(/:root\b/g, selector)
+    const style = document.createElement('style')
+    style.id = id
+    style.textContent = scoped
+    document.head.appendChild(style)
+  }
+
+  inject(lightTokensRaw, '[data-theme="light"]', 'protowiki-tokens-light')
+
+  inject(lightTokensRaw, '[data-theme="dark"]', 'protowiki-tokens-dark-base')
+  inject(darkTokensRaw, '[data-theme="dark"]', 'protowiki-tokens-dark-palette')
+}
+
+// Module-level reactive refs that mirror the data-skin / data-theme
+// attributes on <html>. Hooks read these (read-only); only initTheming()
+// writes to them.
+export const globalSkin: Ref<Skin> = ref<Skin>('desktop')
+export const globalTheme: Ref<Theme> = ref<Theme>('light')
+
+let themePreference: ConfigTheme = 'light'
+let webSkinPreference: ConfigWebSkin = 'auto'
+let colorSchemeMql: MediaQueryList | null = null
+let onColorSchemeChange: ((event: MediaQueryListEvent) => void) | null = null
+let viewportMql: MediaQueryList | null = null
+let onViewportChange: ((event: MediaQueryListEvent) => void) | null = null
+
+function resolveThemeFromPreference(preference: ConfigTheme): Theme {
+  if (preference === 'light') return 'light'
+  if (preference === 'dark') return 'dark'
+  return resolveThemeFromMedia()
+}
+
+function resolveSkinFromViewport(): Skin {
+  if (typeof window === 'undefined') return 'desktop'
+  return window.innerWidth >= DESKTOP_MIN_WIDTH ? 'desktop' : 'mobile'
+}
+
+function resolveThemeFromMedia(): Theme {
+  if (typeof window === 'undefined' || !window.matchMedia) return 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function setHtmlAttribute(name: 'data-skin' | 'data-theme', value: string): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.setAttribute(name, value)
+}
+
+/** Matches Vector / Minerva RL selectors gated on `html.skin-theme-clientpref-night`. */
+const WIKI_SKIN_NIGHT_CLASS = 'skin-theme-clientpref-night'
+
+/**
+ * Toggle Wikipedia's “night” hook on `<html>` when the **global** Codex theme is dark.
+ * ResourceLoader bundles ship rules like `html.skin-theme-clientpref-night .navbox a { … }`
+ * for link colours, figure backgrounds, etc.; without this class those rules never match.
+ *
+ * TemplateStyles (Navbox, Infobox, …) still embed their own light pastel hex values — we
+ * patch those under `[data-theme="dark"] .mw-parser-output` in `src/styles/dark.css`.
+ */
+function syncWikiSkinNightClass(theme: Theme): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.toggle(WIKI_SKIN_NIGHT_CLASS, theme === 'dark')
+}
+
+function resolveEffectiveTheme(preference: ConfigTheme): Theme {
+  return resolveThemeFromPreference(preference)
+}
+
+function applyGlobalTheme(theme: Theme): void {
+  globalTheme.value = theme
+  setHtmlAttribute('data-theme', theme)
+  syncWikiSkinNightClass(theme)
+}
+
+function applyGlobalSkin(skin: Skin): void {
+  globalSkin.value = skin
+  setHtmlAttribute('data-skin', skin)
+}
+
+function teardownViewportListener(): void {
+  if (viewportMql && onViewportChange) {
+    viewportMql.removeEventListener('change', onViewportChange)
+  }
+  viewportMql = null
+  onViewportChange = null
+}
+
+function setupViewportListener(): void {
+  if (typeof window === 'undefined' || !window.matchMedia) return
+
+  teardownViewportListener()
+
+  viewportMql = window.matchMedia(`(min-width: ${DESKTOP_MIN_WIDTH}px)`)
+  onViewportChange = (event: MediaQueryListEvent) => {
+    if (webSkinPreference !== 'auto') return
+    const next: Skin = event.matches ? 'desktop' : 'mobile'
+    if (next !== globalSkin.value) {
+      applyGlobalSkin(next)
+    }
+  }
+  viewportMql.addEventListener('change', onViewportChange)
+}
+
+function resolveEffectiveSkin(preference: ConfigWebSkin): Skin {
+  if (preference === 'desktop' || preference === 'mobile') return preference
+  return resolveSkinFromViewport()
+}
+
+/**
+ * Apply stored web skin preference (auto / desktop / mobile) to the global
+ * `data-skin`. URL `?skin=` is kept in sync via `@/appearance/url-sync`.
+ */
+export function applyWebSkinPreference(webSkin: ConfigWebSkin): void {
+  webSkinPreference = webSkin
+
+  applyGlobalSkin(resolveEffectiveSkin(webSkin))
+
+  if (webSkin === 'auto') {
+    setupViewportListener()
+  } else {
+    teardownViewportListener()
+  }
+}
+
+function teardownColorSchemeListener(): void {
+  if (colorSchemeMql && onColorSchemeChange) {
+    colorSchemeMql.removeEventListener('change', onColorSchemeChange)
+  }
+  colorSchemeMql = null
+  onColorSchemeChange = null
+}
+
+function setupColorSchemeListener(): void {
+  if (typeof window === 'undefined' || !window.matchMedia) return
+
+  teardownColorSchemeListener()
+
+  colorSchemeMql = window.matchMedia('(prefers-color-scheme: dark)')
+  onColorSchemeChange = (event: MediaQueryListEvent) => {
+    if (themePreference !== 'system') return
+    const next: Theme = event.matches ? 'dark' : 'light'
+    if (next !== globalTheme.value) {
+      applyGlobalTheme(next)
+    }
+  }
+  colorSchemeMql.addEventListener('change', onColorSchemeChange)
+}
+
+/**
+ * Apply a stored theme preference (light / dark / system) to the global
+ * document theme. URL `?theme=` is kept in sync via `@/appearance/url-sync`.
+ */
+export function applyThemePreference(preference: ConfigTheme): void {
+  themePreference = preference
+  applyGlobalTheme(resolveEffectiveTheme(preference))
+
+  if (preference === 'system') {
+    setupColorSchemeListener()
+  } else {
+    teardownColorSchemeListener()
+  }
+}
+
+/**
+ * Resolve and apply the initial skin / theme on <html>, then subscribe to
+ * viewport and prefers-color-scheme changes so the global state stays
+ * reactive when no URL param is pinning the value.
+ *
+ * Order of precedence:
+ *   skin  : config preference (`?skin=` syncs into settings via `@/appearance/url-sync`)
+ *   theme : config preference (`?theme=` syncs into settings via `@/appearance/url-sync`)
+ *
+ * Call this once, before mounting the app.
+ */
+/** Sync `html[data-codex-patched]` from installed Codex (including dev toggles). */
+export function syncCodexPatchHtmlAttribute(): void {
+  if (typeof document === 'undefined') return
+  const codexPatchChangeId = getCodexPatchChangeId()
+  if (codexPatchChangeId) {
+    document.documentElement.setAttribute('data-codex-patched', codexPatchChangeId)
+  } else {
+    document.documentElement.removeAttribute('data-codex-patched')
+  }
+}
+
+export function initTheming(): void {
+  if (typeof window === 'undefined') return
+
+  injectThemedTokens()
+
+  syncCodexPatchHtmlAttribute()
+
+  const config = protowikiConfig.value
+  applyWebSkinPreference(config.webSkin)
+  applyThemePreference(config.theme)
+}

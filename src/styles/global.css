@@ -1,0 +1,335 @@
+/*
+ * ProtoWiki global styles
+ * -----------------------
+ *
+ * Codex design tokens (light + dark) are injected at boot by
+ * src/theme.ts, scoped to [data-theme="light"] / [data-theme="dark"]
+ * so per-subtree overrides cascade naturally.
+ *
+ * This file holds **site-wide** defaults only: a tiny reset, semantic HTML
+ * typography from the Codex style guide (`h1`–`h6`, `p`, lists, `blockquote`, …),
+ * links / focus, and reader-only `.mw-first-heading` underline. Layout shells
+ * (`ChromeWrapper`, `ArticleLive`, `ArticleCustom`, `ArticleWrapper`, `ArticleRenderer`, `SpecialPageWrapper`, etc.) live next to those
+ * components as `<style scoped>`.
+ *
+ * Theme-specific tweaks for shared classes live in `dark.css`.
+ *
+ * Use Codex tokens (var(--color-…)/var(--background-color-…)/var(--spacing-…)
+ * etc.) inside this file. Don't hand-pick hex values — the dark tokens won't
+ * follow.
+ */
+
+/* ---------- Tiny reset ---------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  /* Reserve scrollbar width so Codex overlays (dialogs, bottom sheets) don't shift layout. */
+  scrollbar-gutter: stable;
+}
+
+/*
+ * Codex `useScrollLock` also sets body padding-right when a dialog or bottom
+ * sheet opens. With scrollbar-gutter on html that is double reservation and
+ * leaves an unpainted strip on the right. Span backdrops with inset edges
+ * instead of 100vw so they match the layout width when the gutter is stable.
+ */
+body:has(.cdx-dialog-backdrop),
+body:has(.cdx-popover__backdrop--bottom-sheet) {
+  padding-right: 0 !important;
+}
+
+.cdx-dialog-backdrop,
+.cdx-popover__backdrop--bottom-sheet {
+  width: auto;
+  right: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  /* Codex typography guide — Body row + platform stack
+   * https://doc.wikimedia.org/codex/latest/style-guide/typography.html */
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-medium, 1rem);
+  font-weight: var(--font-weight-normal, 400);
+  line-height: var(--line-height-medium, 1.6);
+  color: var(--color-base, #202122);
+  background-color: var(--background-color-base, #fff);
+}
+
+/*
+ * Long-form prose surfaces — same Body row so `p` / lists inherit correctly
+ * without a global `p { font-size: … }` rule (which would fight chrome UI
+ * that intentionally uses smaller type, e.g. `.chrome-footer`).
+ */
+.mw-parser-output,
+.plain-wrapper,
+.article-wrapper__body,
+.special-page-wrapper__body {
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-medium);
+  color: var(--color-base);
+}
+
+a {
+  color: var(--color-progressive, #36c);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-progressive--hover, #447ff5);
+  text-decoration: underline;
+}
+
+a:visited {
+  color: var(--color-visited, #6a60b0);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-progressive, #36c);
+  outline-offset: 2px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+ * Codex style guide — semantic HTML typography
+ * https://doc.wikimedia.org/codex/latest/style-guide/typography.html
+ *
+ * Maps Heading 1–4, Body (via `body` + prose wrappers), Small, Figure caption,
+ * Cite, block quote, and related elements to Codex tokens. Theme colours cascade
+ * via [data-theme] from src/theme.ts.
+ */
+h1 {
+  margin-block: 0 var(--spacing-100, 16px);
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-xxx-large);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-xxx-large);
+  color: var(--color-base);
+}
+
+h2 {
+  margin-block: var(--spacing-200, 24px) var(--spacing-75, 12px);
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-xx-large);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-xx-large);
+  color: var(--color-base);
+}
+
+h3 {
+  margin-block: var(--spacing-200, 24px) var(--spacing-75, 12px);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-x-large);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-x-large);
+  color: var(--color-base);
+}
+
+h4 {
+  margin-block: var(--spacing-150, 24px) var(--spacing-75, 12px);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-large);
+  color: var(--color-base);
+}
+
+h5 {
+  margin-block: var(--spacing-150, 24px) var(--spacing-50, 8px);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-large);
+  color: var(--color-base);
+}
+
+h6 {
+  margin-block: var(--spacing-150, 24px) var(--spacing-50, 8px);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-medium);
+  color: var(--color-base);
+}
+
+p {
+  margin-block: 0 var(--spacing-75, 12px);
+}
+
+ul,
+ol {
+  margin-block: 0 var(--spacing-75, 12px);
+  margin-inline: 0;
+  padding-inline-start: var(--spacing-200, 32px);
+}
+
+li {
+  margin-block: var(--spacing-25, 4px);
+}
+
+ul ul,
+ul ol,
+ol ul,
+ol ol {
+  margin-block-start: var(--spacing-50, 8px);
+  margin-block-end: 0;
+}
+
+/* Codex menus (TypeaheadSearch, Lookup, Select, …) — not article prose lists. */
+.cdx-menu__listbox,
+.cdx-menu__group {
+  margin-block: 0;
+  padding-inline-start: 0;
+}
+
+.cdx-menu__listbox > li,
+.cdx-menu__group > li {
+  margin-block: 0;
+}
+
+dl {
+  margin-block: 0 var(--spacing-75, 12px);
+}
+
+dt {
+  margin-block: var(--spacing-75, 12px) var(--spacing-25, 4px);
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-medium);
+  color: var(--color-base);
+}
+
+dt:first-child {
+  margin-block-start: 0;
+}
+
+dd {
+  margin-inline-start: 0;
+  margin-block: 0 var(--spacing-50, 8px);
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-medium);
+  color: var(--color-base);
+}
+
+figure {
+  margin-block: var(--spacing-100, 16px);
+  margin-inline: 0;
+}
+
+caption {
+  padding-block: var(--spacing-50, 8px);
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-small);
+  color: var(--color-subtle);
+  text-align: start;
+}
+
+small {
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-small);
+}
+
+blockquote {
+  margin-block: var(--spacing-100, 16px);
+  margin-inline: 0;
+  padding-inline-start: var(--spacing-150, 24px);
+  border-inline-start: 4px solid var(--border-color-muted);
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-medium);
+  color: var(--color-base);
+}
+
+cite {
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-small);
+  font-style: normal;
+}
+
+figcaption {
+  font-family:
+    var(--font-family-system-sans, system-ui, sans-serif), var(--font-family-base, sans-serif);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-subtle);
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-family-monospace);
+  font-size: var(--font-size-small);
+}
+
+pre {
+  overflow: auto;
+  margin-block: var(--spacing-100, 16px);
+  padding: var(--spacing-75, 12px);
+  border-radius: var(--border-radius-base);
+  font-family: var(--font-family-monospace);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+  background-color: var(--background-color-neutral-subtle);
+  color: var(--color-base);
+}
+
+strong,
+b {
+  font-weight: var(--font-weight-bold);
+}
+
+hr {
+  margin-block: var(--spacing-150, 24px);
+  border: none;
+  border-block-start: 1px solid var(--border-color-muted);
+}
+
+/*
+ * Primary page titles (`h1`, e.g. `.mw-first-heading`) use Codex **Heading 1** on
+ * all skins: serif, normal weight, xxx-large — see
+ * https://doc.wikimedia.org/codex/latest/style-guide/typography.html
+ *
+ * Production Minerva keeps article titles in serif while chrome/UI stays sans; we
+ * match that by **not** overriding `h1` for `[data-skin="mobile"]`.
+ */
+
+/*
+ * Reader first-heading underline — MediaWiki `mw-first-heading` parity.
+ * Typography comes from `h1` + Codex tokens above; this class adds only the
+ * Wikipedia-style separator used by `PlainWrapper` and editor/demo surfaces —
+ * reader article titles ship in `ArticleHeader`, not an extra `.mw-first-heading`.
+ */
+.mw-first-heading {
+  padding-bottom: var(--spacing-50, 8px);
+  border-bottom: 1px solid var(--border-color-subtle, #c8ccd1);
+}

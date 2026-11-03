@@ -1,0 +1,5 @@
+node_modules
+dist
+src/typed-router.d.ts
+src/auto-imports.d.ts
+src/styles/wiki-skins/*.css

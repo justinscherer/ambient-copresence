@@ -1,0 +1,266 @@
+# Composition recipes
+
+A page is one or more wrappers + the components inside. There is no
+"layout layer" beyond what's expressed in the template.
+
+## Full Wikipedia article page
+
+```vue
+<ChromeWrapper>
+  <ArticleLive article="Albert Einstein" />
+</ChromeWrapper>
+```
+
+## App shell with header + bottom nav
+
+For **`platform: 'app'`** prototypes — mobile app chrome (wordmark header,
+icon bottom nav). No Vector/Minerva skin.
+
+```vue
+<script setup lang="ts">
+import AppChromeWrapper from '@/components/app/AppChromeWrapper.vue'
+
+definePage({ meta: { platform: 'app' } })
+</script>
+
+<template>
+  <AppChromeWrapper>
+    <p>App body content.</p>
+  </AppChromeWrapper>
+</template>
+```
+
+**Reference implementation:** **`src/prototypes/template-app-chrome/`**. See
+[`app-chrome.md`](app-chrome.md) for props, slots, and primitive APIs.
+
+## In-app article screen
+
+Same article surface as the web page, with **`app`** for the apps' lead block and
+in-app reading affordances. No **`skin`** — **`app`** pins it to **`mobile`**.
+
+```vue
+<script setup lang="ts">
+import AppChromeWrapper from '@/components/app/AppChromeWrapper.vue'
+import ArticleLive from '@/components/article/ArticleLive.vue'
+
+definePage({ meta: { platform: 'app' } })
+</script>
+
+<template>
+  <AppChromeWrapper>
+    <ArticleLive app article="Wet Leg" lang="en" />
+  </AppChromeWrapper>
+</template>
+```
+
+**Reference implementation:** **`src/prototypes/template-app-article/`**. See
+[`article.md`](article.md#in-app-articles-app) for what **`app`** changes, and
+[`protowiki-app-prototyping`](../../protowiki-app-prototyping/SKILL.md) for the
+app platform as a whole.
+
+## Hand-authored article (no live fetch)
+
+Use when the prototype needs **Vue-authored** article markup (infobox + sections) without **`page/html`**. Prefer **`ArticleCustom`**; content lands in **`ArticleRenderer`** (**`.mw-parser-output`**) with skin CSS applied.
+
+```vue
+<script setup lang="ts">
+import ArticleCustom from '@/components/article/ArticleCustom.vue'
+import ChromeWrapper from '@/components/chrome/ChromeWrapper.vue'
+
+definePage({
+  meta: { title: 'My hand-authored article', description: '…' },
+})
+</script>
+
+<template>
+  <ChromeWrapper>
+    <ArticleCustom title="Example band">
+      <section>
+        <!-- table.infobox… + lead paragraphs -->
+      </section>
+      <section>
+        <h2>History</h2>
+        <!-- … -->
+      </section>
+    </ArticleCustom>
+  </ChromeWrapper>
+</template>
+```
+
+**Reference implementation:** **`src/prototypes/example-custom-article/`** (gallery **Custom article** — Wet Leg intro + History, infobox, footnotes + References, **`editable`**). Infobox header colours, lead markup order, and RL vs template styles are documented in [`article.md`](article.md#hand-authored-article-markup-no-live-fetch).
+
+## Article page with extra markup beside the parser output
+
+Place experiments as siblings before or after `<ArticleLive>` or `<ArticleCustom>` in the padded article region.
+
+```vue
+<ChromeWrapper>
+  <MyInfoboxExperiment />
+  <ArticleLive article="Talk:Albert Einstein" />
+</ChromeWrapper>
+```
+
+## Special-page-style page
+
+```vue
+<ChromeWrapper>
+  <SpecialPageWrapper title="Suggested edits">
+    <template #actions>
+      <CdxButton action="progressive" weight="primary">Pick a task</CdxButton>
+    </template>
+    <p>Body content.</p>
+  </SpecialPageWrapper>
+</ChromeWrapper>
+```
+
+Special pages usually **omit** the mock last-edited notice (desktop block **and** mobile strip) — mirror **`src/prototypes/template-special-page/index.vue`**:
+
+```vue
+<ChromeWrapper :last-edited-notice="false">
+  <SpecialPageWrapper title="…">
+    <!-- … -->
+  </SpecialPageWrapper>
+</ChromeWrapper>
+```
+
+**Saved pages (web):** starter **`src/prototypes/template-saved-pages/`** — mock reading list cards, responsive grid/list. Wire the cluster with path constants in **`src/composables/webTemplatePaths.ts`**, **`ChromeWrapper`** **`savedPagesRoute`**, **`ArticleLive`** **`wikiLinkRoute`** / **`savedPagesRoute`**, and **`useWikiPrototypeNavigation`** for **`?title=`** + appearance query preservation (see **`template-article`**, **`template-main-page`**).
+
+## Bare canvas with chrome (no columns)
+
+```vue
+<ChromeWrapper>
+  <h1>Anything</h1>
+</ChromeWrapper>
+```
+
+## A/B preview — two themes, side by side
+
+```vue
+<div class="protowiki-ab">
+  <ChromeWrapper theme="light">
+    <ArticleLive article="Albert Einstein" />
+  </ChromeWrapper>
+  <ChromeWrapper theme="dark">
+    <ArticleLive article="Albert Einstein" />
+  </ChromeWrapper>
+</div>
+
+<style scoped>
+.protowiki-ab {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+</style>
+```
+
+## Mobile preview embedded in a desktop page
+
+```vue
+<MobileWrapper>
+  <ChromeWrapper skin="mobile">
+    <ArticleLive article="Albert Einstein" />
+  </ChromeWrapper>
+</MobileWrapper>
+```
+
+`MobileWrapper` centres a **360px** column on viewports **≥480px** and shows
+**`--background-color-neutral`** side gutters; below **480px** the slot is full width. Pair with **`ChromeWrapper skin="mobile"`** so **`Dashboard`** (and similar layouts keyed on **`data-skin`**) activate their mobile slots inside the narrow column.
+
+## Edit-suggestion flow
+
+Put **your editing surface** (e.g. a `contenteditable` region or code lifted from [Bárbara’s repos](editors.md)) beside a suggestion panel — see [`edit-suggestions.md`](edit-suggestions.md). Sketch:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const surfaceRef = ref<HTMLDivElement | null>(null)
+const draftHtml = ref('<p>…</p>')
+function syncDraft() {
+  if (!surfaceRef.value) return
+  draftHtml.value = surfaceRef.value.innerHTML
+}
+function onPublish() {
+  /* mock publish — never hit a real wiki */
+}
+</script>
+
+<ChromeWrapper>
+  <SpecialPageWrapper title="Suggested edits">
+    <div class="layout">
+      <div
+        ref="surfaceRef"
+        class="mw-parser-output"
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        @input="syncDraft"
+      ></div>
+      <!-- <aside> suggestion cards … -->
+    </div>
+  </SpecialPageWrapper>
+</ChromeWrapper>
+```
+
+## Newcomer homepage / dashboard
+
+Growth-style personal dashboard inside wiki chrome. Use **`Dashboard`** for the
+responsive grid and **`DashboardModule`** for each box.
+
+```vue
+<ChromeWrapper :last-edited-notice="false">
+  <SpecialPageWrapper title="Dashboard" help>
+    <Dashboard>
+      <template #banner>
+        <!-- mobile-only strip, e.g. Share feedback -->
+      </template>
+      <template #mobile>
+        <!-- DashboardModule with :to — tappable link cards -->
+      </template>
+      <template #primary>
+        <!-- desktop main column — DashboardModule without :to -->
+      </template>
+      <template #sidebar>
+        <!-- desktop sidebar modules — DashboardModule without :to -->
+      </template>
+    </Dashboard>
+  </SpecialPageWrapper>
+</ChromeWrapper>
+```
+
+- **Starter:** **`src/prototypes/template-dashboard/`** — inline placeholder modules
+- **Full example:** **`src/prototypes/template-homepage/`** — co-located `HelpModule.vue`, `ImpactModule.vue`, `MentorModule.vue`, `StructuredTasksModule.vue`, plus **`dashpage-fixtures.ts`**
+- **Mobile drill-downs:** tap a homepage card (`to: IMPACT_PAGE` / `HELP_PAGE` / `MENTOR_PAGE`) → nested **`impact/`**, **`help/`**, or **`mentor/index.vue`** with **`MobileSubpageHeader`** (optional **`#actions`** menu) + module **`standalone`** body (full layout, bleeds to top/sides).
+
+See [`dashboard.md`](dashboard.md) for slot/prop detail. **`SpecialPageWrapper` `help`** is the title-row Help link — not the same as `template-homepage`'s **`HelpModule`** card.
+
+## Article embedded in a dashboard module (no extra chrome)
+
+```vue
+<DashboardModule title="Suggested article">
+  <ArticleLive article="Solar energy" />
+</DashboardModule>
+```
+
+See also the **Newcomer homepage / dashboard** recipe above for the full page stack.
+
+## Power-user — chrome primitives directly
+
+```vue
+<script setup lang="ts">
+import ChromeHeader from '@/components/chrome/ChromeHeader.vue'
+import ChromeFooter from '@/components/chrome/ChromeFooter.vue'
+import ArticleLive from '@/components/article/ArticleLive.vue'
+</script>
+
+<template>
+  <div class="custom-shell">
+    <ChromeHeader />
+    <main>
+      <ArticleLive article="Albert Einstein" />
+    </main>
+    <ChromeFooter />
+  </div>
+</template>
+```

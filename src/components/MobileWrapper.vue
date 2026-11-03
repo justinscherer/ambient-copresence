@@ -1,0 +1,66 @@
+<script setup lang="ts">
+/**
+ * Phone-frame preview shell: full-width children below **480px** viewport;
+ * centred column with neutral side gutters (Codex **`--background-color-neutral`**) when wider.
+ *
+ * Compose with **`ChromeWrapper skin="mobile"`** (or other mobile-skinned content)
+ * inside the default slot.
+ */
+interface Props {
+  /** BCP-47 language tag on the inner column (optional). */
+  lang?: string
+  /** Writing direction on the inner column (optional). */
+  dir?: 'ltr' | 'rtl'
+  /** Max width of the centred column when clamped (wide viewports). */
+  maxWidth?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  lang: undefined,
+  dir: undefined,
+  maxWidth: '412px',
+})
+</script>
+
+<template>
+  <div class="mobile-wrapper">
+    <div
+      class="mobile-wrapper__column"
+      :lang="props.lang"
+      :dir="props.dir"
+      :style="{ '--mobile-wrapper-max-width': props.maxWidth }"
+    >
+      <slot />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.mobile-wrapper {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.mobile-wrapper__column {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Wider than a typical phone column — show frame + gutters (below global skin 640px). */
+@media (min-width: 480px) {
+  .mobile-wrapper {
+    min-height: 100vh;
+    background-color: var(--background-color-neutral);
+  }
+
+  .mobile-wrapper__column {
+    max-width: var(--mobile-wrapper-max-width, 412px);
+    margin-inline: auto;
+    background-color: var(--background-color-base);
+    border-inline: var(--border-width-base) solid var(--border-color-muted);
+  }
+}
+</style>

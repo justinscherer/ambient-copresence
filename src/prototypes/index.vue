@@ -1,0 +1,229 @@
+<script setup lang="ts">
+definePage({
+  meta: {
+    title: 'ProtoWiki',
+    description: 'Prototype index',
+  },
+})
+
+import { useRoute, useRouter } from 'vue-router'
+
+import { CdxButton, CdxCard, CdxIcon, CdxTab, CdxTabs } from '@wikimedia/codex'
+import {
+  cdxIconAppearance,
+  cdxIconLightbulb,
+  cdxIconLogoCodex,
+  cdxIconUserAvatar,
+} from '@wikimedia/codex-icons'
+
+import CodexPatchMessage from '@/components/CodexPatchMessage.vue'
+import PlainWrapper from '@/components/PlainWrapper.vue'
+import AppearanceSettingsPanel from '@/components/settings/AppearanceSettingsPanel.vue'
+import CodexSettingsPanel from '@/components/settings/CodexSettingsPanel.vue'
+import SettingsPopover from '@/components/settings/SettingsPopover.vue'
+import SuggestionSettingsPanel from '@/components/settings/SuggestionSettingsPanel.vue'
+import UserSettingsPanel from '@/components/settings/UserSettingsPanel.vue'
+import { CODEX_SETTINGS_POPOVER_OPEN_KEY } from '@/composables/useCodexBuild'
+import { useGalleryTab } from '@/composables/useGalleryTab'
+import { usePrototypeGallery } from '@/composables/usePrototypeGallery'
+import { PROTOWIKI_API_PROJECT_URL, PROTOWIKI_LICENSE_URL } from '@/config'
+import { preservedQueryFromLocationQuery } from '@/appearance'
+import { GALLERY_TABS } from '@/prototype-gallery'
+
+const router = useRouter()
+const route = useRoute()
+const { galleryTab } = useGalleryTab()
+const { entries, webTemplateEntries, appTemplateEntries } = usePrototypeGallery(galleryTab)
+
+function prototypeHref(path: string): string {
+  return router.resolve({
+    path,
+    query: preservedQueryFromLocationQuery(route.query),
+  }).href
+}
+
+const docsUrl = `${PROTOWIKI_API_PROJECT_URL}#prototyping-system`
+</script>
+
+<template>
+  <PlainWrapper heading="ProtoWiki">
+    <template #actions>
+      <div class="prototype-index__settings-toolbar">
+        <SettingsPopover :restore-open-key="CODEX_SETTINGS_POPOVER_OPEN_KEY">
+          <template #default="{ toggle, open }">
+            <CdxButton
+              weight="quiet"
+              :icon-only="true"
+              aria-label="Codex settings"
+              :aria-expanded="open"
+              @click="toggle"
+            >
+              <CdxIcon :icon="cdxIconLogoCodex" />
+            </CdxButton>
+          </template>
+          <template #panel>
+            <CodexSettingsPanel />
+          </template>
+        </SettingsPopover>
+        <SettingsPopover>
+          <template #default="{ toggle, open }">
+            <CdxButton
+              weight="quiet"
+              :icon-only="true"
+              aria-label="Suggestion mode settings"
+              :aria-expanded="open"
+              @click="toggle"
+            >
+              <CdxIcon :icon="cdxIconLightbulb" />
+            </CdxButton>
+          </template>
+          <template #panel>
+            <SuggestionSettingsPanel />
+          </template>
+        </SettingsPopover>
+        <SettingsPopover>
+          <template #default="{ toggle, open }">
+            <CdxButton
+              weight="quiet"
+              :icon-only="true"
+              aria-label="Appearance"
+              :aria-expanded="open"
+              @click="toggle"
+            >
+              <CdxIcon :icon="cdxIconAppearance" />
+            </CdxButton>
+          </template>
+          <template #panel>
+            <AppearanceSettingsPanel />
+          </template>
+        </SettingsPopover>
+        <SettingsPopover>
+          <template #default="{ toggle, open }">
+            <CdxButton
+              weight="quiet"
+              :icon-only="true"
+              aria-label="Account"
+              :aria-expanded="open"
+              @click="toggle"
+            >
+              <CdxIcon :icon="cdxIconUserAvatar" />
+            </CdxButton>
+          </template>
+          <template #panel="{ open: settingsOpen }">
+            <UserSettingsPanel :settings-open="settingsOpen" />
+          </template>
+        </SettingsPopover>
+      </div>
+    </template>
+    <div class="prototype-index">
+      <CodexPatchMessage class="prototype-index__codex-message" />
+      <CdxTabs v-model:active="galleryTab" class="prototype-index__tabs">
+        <CdxTab v-for="tab in GALLERY_TABS" :key="tab.value" :name="tab.value" :label="tab.label">
+          <div v-if="galleryTab === tab.value" class="prototype-index__list">
+            <template v-if="tab.value === 'template'">
+              <h3 v-if="webTemplateEntries.length" class="prototype-index__section-heading">
+                Web templates
+              </h3>
+              <div
+                v-for="entry in webTemplateEntries"
+                :key="entry.path"
+                class="prototype-index__card"
+              >
+                <CdxCard :url="prototypeHref(entry.path)" :icon="entry.icon">
+                  <template #title>{{ entry.title }}</template>
+                  <template v-if="entry.description" #description>{{ entry.description }}</template>
+                  <template #supporting-text>{{ entry.supportingText }}</template>
+                </CdxCard>
+              </div>
+
+              <h3 v-if="appTemplateEntries.length" class="prototype-index__section-heading">
+                App templates
+              </h3>
+              <div
+                v-for="entry in appTemplateEntries"
+                :key="entry.path"
+                class="prototype-index__card"
+              >
+                <CdxCard :url="prototypeHref(entry.path)" :icon="entry.icon">
+                  <template #title>{{ entry.title }}</template>
+                  <template v-if="entry.description" #description>{{ entry.description }}</template>
+                  <template #supporting-text>{{ entry.supportingText }}</template>
+                </CdxCard>
+              </div>
+            </template>
+
+            <template v-else>
+              <p v-if="tab.value === 'prototype' && !entries.length" class="prototype-index__empty">
+                This is where your prototype(s) will appear when you make one. For information on
+                how to get started, check out the
+                <a :href="docsUrl" target="_blank" rel="noopener noreferrer">docs</a>. Or browse the
+                <RouterLink :to="{ query: { category: 'template' } }">templates</RouterLink> to pick
+                a good starting point.
+              </p>
+              <div v-for="entry in entries" :key="entry.path" class="prototype-index__card">
+                <CdxCard :url="prototypeHref(entry.path)" :icon="entry.icon">
+                  <template #title>{{ entry.title }}</template>
+                  <template v-if="entry.description" #description>{{ entry.description }}</template>
+                  <template #supporting-text>{{ entry.supportingText }}</template>
+                </CdxCard>
+              </div>
+            </template>
+          </div>
+        </CdxTab>
+      </CdxTabs>
+
+      <footer>
+        <p>
+          <a :href="PROTOWIKI_API_PROJECT_URL" rel="noopener noreferrer">Source</a>
+          <br />
+          <a :href="PROTOWIKI_LICENSE_URL" rel="noopener noreferrer">License</a>
+        </p>
+      </footer>
+    </div>
+  </PlainWrapper>
+</template>
+
+<style scoped>
+.prototype-index__settings-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-25);
+}
+
+.prototype-index__codex-message {
+  margin-top: var(--spacing-75);
+  margin-bottom: var(--spacing-100);
+}
+
+.prototype-index__tabs {
+  margin-top: var(--spacing-50);
+}
+
+/* Codex non-framed tabs inset the header 4px; zero it so labels match the h1/cards. */
+.prototype-index__tabs :deep(.cdx-tabs__header) {
+  margin-inline: 0;
+}
+
+.prototype-index__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-75);
+  margin-top: var(--spacing-75);
+}
+
+.prototype-index__card {
+  min-width: 0;
+}
+
+.prototype-index__section-heading {
+  margin: var(--spacing-100) 0 0;
+}
+
+.prototype-index__empty {
+  margin: var(--spacing-100) 0 0;
+}
+
+footer {
+  margin-top: var(--spacing-200);
+}
+</style>
