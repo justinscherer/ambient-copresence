@@ -89,6 +89,37 @@ export const TUNING_PARAMS = {
   driftStep: { label: 'Drift per cue', min: 0, max: 10, step: 0.1, unit: '%', value: 7.4 },
   driftLimit: { label: 'Drift limit', min: 0, max: 50, step: 0.5, unit: '%', value: 24 },
 
+  /* Resonator: narrow band-pass filters on C dorian and its harmonics, fed by everything. */
+  resonanceMix: { label: 'Dry/wet', min: 0, max: 100, step: 1, unit: '%', value: 4 },
+  resonanceLevel: { label: 'Level', min: 0, max: 4, step: 0.01, value: 1.41 },
+  resonanceDecaySmall: {
+    label: 'Ring, small room',
+    min: 0.01,
+    max: 10,
+    step: 0.01,
+    unit: 's',
+    value: 0.05,
+  },
+  resonanceDecayLarge: {
+    label: 'Ring, large room',
+    min: 0.1,
+    max: 20,
+    step: 0.1,
+    unit: 's',
+    value: 1,
+  },
+  resonanceOctave: { label: 'Lowest C (octave)', min: 0, max: 6, step: 1, value: 1 },
+  resonanceOctaves: { label: 'Octaves of the scale', min: 1, max: 6, step: 1, value: 4 },
+  resonancePartials: { label: 'Harmonics per note', min: 1, max: 16, step: 1, value: 8 },
+  resonanceRolloff: { label: 'Harmonic roll-off', min: 0, max: 3, step: 0.05, value: 0 },
+  resonanceOutOfScale: {
+    label: 'Out-of-scale harmonics',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    value: 0.21,
+  },
+
   /* Reverb, from the smallest room (1 reader) to the largest (10,000+). */
   rt60Small: { label: 'Tail, small room', min: 0.05, max: 5, step: 0.05, unit: 's', value: 0.65 },
   rt60Large: { label: 'Tail, large room', min: 0.2, max: 30, step: 0.1, unit: 's', value: 20 },
@@ -203,6 +234,20 @@ export const TUNING_GROUPS: { label: string; keys: TuningKey[] }[] = [
     ],
   },
   { label: 'Variation', keys: ['driftStep', 'driftLimit'] },
+  {
+    label: 'Resonator',
+    keys: [
+      'resonanceMix',
+      'resonanceLevel',
+      'resonanceDecaySmall',
+      'resonanceDecayLarge',
+      'resonanceOctave',
+      'resonanceOctaves',
+      'resonancePartials',
+      'resonanceRolloff',
+      'resonanceOutOfScale',
+    ],
+  },
   {
     label: 'Reverb',
     keys: [

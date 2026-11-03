@@ -12,6 +12,8 @@ import type { Tuning, TuningKey } from './tuning'
  *   default), never far from its baseline (±10%), so no two cues are quite alike.
  *
  * Every value comes from a live `Tuning` object (see tuning.ts), so it can be tuned by ear.
+ * - **Resonator:** the room tone and every cue also feed one bank of narrow band-pass filters
+ *   on C dorian and its harmonics, which ring longer as more people read.
  * - **Room:** every cue runs through a stereo reverb whose size follows log10(readers): a few
  *   readers sound like a small, close room; thousands sound like a hall.
  */
@@ -90,6 +92,62 @@ function rustleVoice(t: Tuning): CueVoice {
       { type: 'lowpass', ratio: t.departureLowpass, q: Math.SQRT1_2 },
     ],
   }
+}
+
+/** C dorian, as semitones above C. */
+const DORIAN = [0, 2, 3, 5, 7, 9, 10]
+/** C0 in Hz, with A4 at 440 Hz. */
+const C0_HZ = 440 * 2 ** (-57 / 12)
+/** Partials closer than this (in cents) share one filter. */
+const MERGE_CENTS = 15
+/** A partial within this many cents of a C dorian degree counts as in the scale. */
+const IN_SCALE_CENTS = 20
+/** Partials above this are left out. */
+const MAX_RESONANCE_HZ = 16000
+/**
+ * Each resonance is scaled by √Q, so its level holds as the decay (and Q) grows, and the bank
+ * by 1/√(filters). This factor then brings pink noise out of the bank at about the level it went in.
+ */
+const BANK_MAKEUP = 4.3
+
+/** One filter in the resonator: a pitch, and the scale notes' partials that land on it. */
+interface Resonance {
+  frequency: number
+  partials: { n: number; inScale: boolean }[]
+}
+
+function cents(a: number, b: number): number {
+  return 1200 * Math.log2(a / b)
+}
+
+function inDorian(frequency: number): boolean {
+  const pitchClass = (((cents(frequency, C0_HZ) % 1200) + 1200) % 1200) / 100
+  return DORIAN.some((degree) => {
+    const distance = Math.abs(pitchClass - degree) * 100
+    return Math.min(distance, 1200 - distance) <= IN_SCALE_CENTS
+  })
+}
+
+/**
+ * C dorian across `resonanceOctaves` octaves from C at `resonanceOctave`, each note with its
+ * first `resonancePartials` harmonics (equal-tempered fundamentals, pure harmonics).
+ */
+export function resonances(t: Tuning): Resonance[] {
+  const out: Resonance[] = []
+  for (let octave = 0; octave < t.resonanceOctaves; octave++) {
+    for (const degree of DORIAN) {
+      const fundamental = C0_HZ * 2 ** (t.resonanceOctave + octave + degree / 12)
+      for (let n = 1; n <= t.resonancePartials; n++) {
+        const frequency = fundamental * n
+        if (frequency > MAX_RESONANCE_HZ) break
+        const partial = { n, inScale: n === 1 || inDorian(frequency) }
+        const same = out.find((r) => Math.abs(cents(r.frequency, frequency)) < MERGE_CENTS)
+        if (same) same.partials.push(partial)
+        else out.push({ frequency, partials: [partial] })
+      }
+    }
+  }
+  return out
 }
 
 /** Pre-rendered textures for each cue; each play picks one at random. */
@@ -196,6 +254,8 @@ function signature(t: Tuning, keys: TuningKey[]): string {
 /** `tuning` is read live: change its values, then call `retune()`. */
 export function createRoomSound(tuning: Tuning): RoomSound {
   const t = tuning
+  /** Room size 0–1 for the current reader count (see roomSize). */
+  let size = 0
   const ctx = new AudioContext({ latencyHint: 'playback' })
   const sr = ctx.sampleRate
 
@@ -272,10 +332,10 @@ export function createRoomSound(tuning: Tuning): RoomSound {
     return buffer
   }
 
-  // Dry only: the room tone is the room itself, not something in it.
+  // No reverb: the room tone is the room itself, not something in it. It does feed the
+  // resonator, whose ringing does reach the reverb (see below).
   const bed = ctx.createGain()
   bed.gain.value = t.bedGainSmall
-  bed.connect(dry)
 
   const scheduled: AudioScheduledSourceNode[] = []
 
@@ -386,6 +446,93 @@ export function createRoomSound(tuning: Tuning): RoomSound {
   const cueSend = ctx.createGain()
   cueSend.connect(reverbIn)
 
+  /* ---------------------------------------------------------------------------------------
+   * Resonator: narrow band-pass filters on C dorian and its harmonics
+   * ------------------------------------------------------------------------------------- */
+
+  /**
+   * A bank of resonances fed by `input`, mixed into `output` at the dry/wet setting. The
+   * filters ring longer as the room grows.
+   */
+  function createBank(input: AudioNode, output: AudioNode) {
+    const wetLevel = ctx.createGain()
+    wetLevel.gain.value = t.resonanceMix / 100
+    wetLevel.connect(output)
+    let filters: { resonance: Resonance; biquad: BiquadFilterNode; level: GainNode }[] = []
+
+    /** Set each filter's Q from the wanted ring time, and its level from its partials. */
+    function tune(glide: number) {
+      const now = ctx.currentTime
+      const decay = expLerp(t.resonanceDecaySmall, t.resonanceDecayLarge, size)
+      const scale = (BANK_MAKEUP * t.resonanceLevel) / Math.sqrt(Math.max(1, filters.length))
+      for (const { resonance, biquad, level } of filters) {
+        // A band-pass rings for RT60 ≈ Q · ln(1000) / (π · f), so solve for Q.
+        const q = (decay * Math.PI * resonance.frequency) / Math.log(1000)
+        const weight = resonance.partials.reduce(
+          (sum, p) => sum + (p.inScale ? 1 : t.resonanceOutOfScale) / p.n ** t.resonanceRolloff,
+          0,
+        )
+        biquad.Q.setTargetAtTime(q, now, glide)
+        level.gain.setTargetAtTime(weight * Math.sqrt(q) * scale, now, glide)
+      }
+      wetLevel.gain.setTargetAtTime(t.resonanceMix / 100, now, glide)
+    }
+
+    /** (Re)build the filters for the current scale range and harmonics. */
+    function build() {
+      for (const { biquad, level } of filters) {
+        input.disconnect(biquad)
+        level.disconnect()
+      }
+      filters = resonances(t).map((resonance) => {
+        const biquad = ctx.createBiquadFilter()
+        biquad.type = 'bandpass'
+        biquad.frequency.value = resonance.frequency
+        const level = ctx.createGain()
+        level.gain.value = 0
+        input.connect(biquad).connect(level).connect(wetLevel)
+        return { resonance, biquad, level }
+      })
+      tune(0.02)
+    }
+
+    build()
+    return { build, tune }
+  }
+
+  /** Dry share of a bus around its resonator (1 − dry/wet). */
+  function dryShare() {
+    return 1 - t.resonanceMix / 100
+  }
+
+  // Room tone: its dry share goes straight out, never to the reverb.
+  const bedDry = ctx.createGain()
+  bedDry.gain.value = dryShare()
+  bed.connect(bedDry).connect(dry)
+
+  // Cues: their dry share goes out and to the reverb.
+  const cueBus = ctx.createGain()
+  const cueDry = ctx.createGain()
+  cueDry.gain.value = dryShare()
+  const cueOut = ctx.createGain()
+  cueBus.connect(cueDry).connect(cueOut)
+  cueOut.connect(dry)
+  cueOut.connect(cueSend)
+
+  // One resonator for both (half the filters of one each), so its ringing, the room tone's
+  // included, goes out and to the reverb with the cues.
+  const resonatorIn = ctx.createGain()
+  bed.connect(resonatorIn)
+  cueBus.connect(resonatorIn)
+  const bank = createBank(resonatorIn, cueOut)
+
+  function tuneResonator(glide: number) {
+    const now = ctx.currentTime
+    bedDry.gain.setTargetAtTime(dryShare(), now, glide)
+    cueDry.gain.setTargetAtTime(dryShare(), now, glide)
+    bank.tune(glide)
+  }
+
   function cuePlayer(voiceOf: (t: Tuning) => CueVoice, render: () => AudioBuffer) {
     let textures = Array.from({ length: VARIANTS }, render)
     const frequency = drift(t)
@@ -418,8 +565,7 @@ export function createRoomSound(tuning: Tuning): RoomSound {
       const panner = ctx.createStereoPanner()
       panner.pan.value = randomBetween(-voice.panWidth, voice.panWidth)
       node.connect(envelope).connect(panner)
-      panner.connect(dry)
-      panner.connect(cueSend)
+      panner.connect(cueBus)
       source.onended = () => panner.disconnect()
       source.start(at)
       source.stop(at + a + d + 0.01)
@@ -470,8 +616,6 @@ export function createRoomSound(tuning: Tuning): RoomSound {
   const fadeIn = Float32Array.from({ length: 32 }, (_, i) => Math.sin(((i / 31) * Math.PI) / 2))
   const fadeOut = Float32Array.from({ length: 32 }, (_, i) => Math.cos(((i / 31) * Math.PI) / 2))
 
-  let size = 0
-
   /** Glide the room's continuous values toward this size (`glide`: time constant, seconds). */
   function tuneRoom(glide: number) {
     const now = ctx.currentTime
@@ -489,6 +633,8 @@ export function createRoomSound(tuning: Tuning): RoomSound {
       filter.frequency.setTargetAtTime(cutoff, now, glide)
       pan.depth.setTargetAtTime(voice.panSign * panDepth, now, glide)
     }
+    // More readers, longer rings.
+    tuneResonator(glide)
   }
 
   /** Load the response for room step `next` into the idle convolver and crossfade to it. */
@@ -560,7 +706,9 @@ export function createRoomSound(tuning: Tuning): RoomSound {
     'reflectionsSmall',
     'reflectionsLarge',
   ]
+  const RESONATOR_SHAPE: TuningKey[] = ['resonanceOctave', 'resonanceOctaves', 'resonancePartials']
   const rendered = {
+    resonator: signature(t, RESONATOR_SHAPE),
     arrivals: signature(t, ARRIVAL_TEXTURE),
     departures: signature(t, DEPARTURE_TEXTURE),
     reverb: signature(t, REVERB),
@@ -569,6 +717,10 @@ export function createRoomSound(tuning: Tuning): RoomSound {
 
   /** Re-render whatever textures or reverb the tuning has changed since they were made. */
   function rerender() {
+    if (signature(t, RESONATOR_SHAPE) !== rendered.resonator) {
+      bank.build()
+      rendered.resonator = signature(t, RESONATOR_SHAPE)
+    }
     if (signature(t, ARRIVAL_TEXTURE) !== rendered.arrivals) {
       arrivals.rerender()
       rendered.arrivals = signature(t, ARRIVAL_TEXTURE)

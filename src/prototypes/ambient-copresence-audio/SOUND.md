@@ -26,7 +26,12 @@ tide and badge (`PresenceTide.vue`), imported from that folder. It adds sound.
 - **Someone leaves:** a slow, soft swell of dull noise across 52% of the stereo field, with no
   flutter or rub. It's band-passed around 515 Hz (Q 0.8) and low-passed at 1.3× that. It has a
   778 ms attack and a 1.9 s decay. Level 0.09.
-- **The room:** every cue runs through a stereo reverb. Its size follows the crowd.
+- **The resonator:** the room tone and every cue also feed a bank of narrow, ringing
+  band-pass filters tuned to C dorian (C D E♭ F G A B♭) and their harmonics. It's 4% wet: a
+  faint shimmer under everything. The more people are reading, the longer each ring lasts.
+  See below.
+- **The room:** every cue and all of the resonance runs through a stereo reverb. The room
+  tone itself stays out of it. The reverb's size follows the crowd.
 
 Each cue plays one of 8 pre-rendered textures. Filters and the envelope (linear attack,
 exponential decay) are applied live. Every time a cue fires, its filter frequency, attack
@@ -50,6 +55,7 @@ Room size is `log10(1 + readers) / log10(10,001)`, the same scale as the tide's 
 | Room tone level    | 0.085        | 0.24        |
 | Room tone cutoff   | 555 Hz       | 945 Hz      |
 | Room tone drift    | ±0.2 pan     | ±1.0 pan    |
+| Resonator ring     | 0.05 s       | 1 s         |
 
 A small, fairly dry room when few people are reading; a vast, bright, very wet hall (20 s
 tail, reverb louder than the dry sound) when the page is packed. The room tone also gets
@@ -59,10 +65,25 @@ A reverb's impulse response can't morph. Room size moves in 10 steps: each new s
 into a second convolver, which crossfades in over 2.5 s. Swaps are at least 3 s apart.
 Pre-delay, return and room tone glide continuously.
 
+**Resonator.** The scale runs over four octaves from C1 (33 Hz) to B♭4. Each note brings its
+first 8 harmonics at equal weight (roll-off 0). The fundamentals are equal-tempered and the
+harmonics pure. Harmonics that land within 20 cents of a C dorian note are kept at full
+weight. Ones that miss (E, B, F♯, C♯ and the flat 7th harmonics) come in at 0.21. Harmonics
+within 15 cents of each other share one filter, which leaves 100 filters.
+
+- Each filter's Q is set from the wanted ring time, `Q = ring × π × f ÷ ln 1000`.
+- Each filter's level is scaled by √Q, so a longer ring is longer, not quieter. The bank's
+  level is 1.41.
+- The room tone and the cues share one bank. Its ringing, including the room tone's, goes
+  out and into the reverb with the cues.
+- Dry/wet is a straight crossfade: 4% means 96% dry plus 4% bank.
+- **Cost:** 100 stereo filters take about 7% of one core on a recent Mac. Phones are several
+  times slower. The slider maxima (6 octaves from C0, 16 harmonics) reach about 234 filters,
+  around 18% on a Mac. Lower harmonics or octaves if a phone stutters.
+
 **Cue thinning.** Arrivals and departures are tracked as smoothed rates (2 s time constant).
 Every departure can play. When a rate is above 40 arrivals/s or 6 departures/s, each event
-plays with probability
-`max ÷ rate`, so each cue stands for several readers. Cues land at random points inside each
+plays with probability `max ÷ rate`, so each cue stands for several readers. Cues land at random points inside each
 200 ms tick, not on the tick grid. Quiet pages hear every arrival; Christa Pike at peak, or
 any page in time-lapse, is a steady patter of crunches with the odd rustle. The readers
 already present on load (the backfill) make no sound.
@@ -71,13 +92,14 @@ already present on load (the backfill) make no sound.
 
 The numbers above are the defaults in `tuning.ts`, last tuned by ear on Nov 3, 2026. The settings button, left of the sound
 toggle, opens a bottom sheet with a slider for every value, grouped into Arrivals,
-Departures, Variation, Reverb, Room tone and Output. It also has a Room sound switch, since
+Departures, Variation, Resonator, Reverb, Room tone and Output. It also has a Room sound switch, since
 the sheet covers the toggle.
 
 - **Live values** (levels, rates, filters, envelopes, pre-delay, return, room tone, output)
   apply to the next cue or within ~50 ms.
 - **Rendered values** re-render 250 ms after the slider stops: textures (crackle density,
-  flutter, rub) and the reverb response (tails, tone, reflections). The reverb crossfades
+  flutter, rub), the reverb response (tails, tone, reflections) and the resonator's pitches
+  (lowest C, octaves, harmonics per note). The reverb crossfades
   to its new response.
 - Values that differ from the default show in blue.
 - **Copy changes** copies only the changed values as JSON, ready to paste back as new
