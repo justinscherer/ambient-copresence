@@ -28,16 +28,41 @@ const PROTOTYPE_PATH = '/ambient-copresence-audio'
 const route = useRoute()
 const { titleFromQuery, setWikiPageTitle } = useWikiPageTitleQuery()
 
-/** Without `?title=`, open one of the modelled top-10 pages at random. */
-const fallbackTitle = ARTICLES[Math.floor(Math.random() * ARTICLES.length)].title
-const article = computed(() => titleFromQuery.value ?? fallbackTitle.replace(/_/g, ' '))
+const LAST_TITLE_KEY = 'ambient-copresence-audio:last-title'
+
+/** A modelled top-10 page at random, never the one this browser opened last. */
+function pickFallbackTitle(): string {
+  let last: string | null = null
+  try {
+    last = localStorage.getItem(LAST_TITLE_KEY)
+  } catch {
+    /* No storage: any page will do. */
+  }
+  const choices = ARTICLES.filter((a) => a.title !== last)
+  const title = choices[Math.floor(Math.random() * choices.length)].title
+  try {
+    localStorage.setItem(LAST_TITLE_KEY, title)
+  } catch {
+    /* No storage: the next load may repeat this page. */
+  }
+  return title
+}
+
+/**
+ * Without `?title=`, open a different modelled page on every load. The pick stays out of the
+ * URL so a reload picks again; `?title=` (a shared link or a wiki link) is kept as given.
+ */
+let fallbackTitle: string | null = null
+const article = computed(
+  () => titleFromQuery.value ?? (fallbackTitle ??= pickFallbackTitle()).replace(/_/g, ' '),
+)
 
 const resolvedTitle = ref<string | null>(null)
 watch(article, () => (resolvedTitle.value = null))
 function onTitleResolved(title: string) {
   if (!title?.trim()) return
   resolvedTitle.value = title
-  setWikiPageTitle(title)
+  if (titleFromQuery.value) setWikiPageTitle(title)
 }
 
 /** Only the modelled pages have readers; others show no oval and play no sound. */
