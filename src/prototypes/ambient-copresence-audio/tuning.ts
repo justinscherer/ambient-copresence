@@ -17,10 +17,10 @@ export const TUNING_PARAMS = {
   arrivalRate: {
     label: 'Most cues per second',
     min: 0.5,
-    max: 40,
+    max: 80,
     step: 0.5,
     unit: '/s',
-    value: 29,
+    value: 40,
   },
   arrivalGain: { label: 'Level', min: 0, max: 1, step: 0.01, value: 0.15 },
   arrivalPan: { label: 'Stereo width', min: 0, max: 1, step: 0.01, value: 0.8 },
@@ -34,14 +34,14 @@ export const TUNING_PARAMS = {
   },
   arrivalQ: { label: 'Band-pass Q', min: 0.1, max: 10, step: 0.05, value: 1.25 },
   arrivalAttack: { label: 'Attack', min: 1, max: 500, step: 1, unit: 'ms', value: 6 },
-  arrivalDecay: { label: 'Decay', min: 10, max: 2000, step: 5, unit: 'ms', value: 60 },
+  arrivalDecay: { label: 'Decay', min: 10, max: 2000, step: 5, unit: 'ms', value: 90 },
   arrivalDensity: {
     label: 'Crackles per second',
     min: 20,
     max: 3000,
     step: 10,
     unit: '/s',
-    value: 160,
+    value: 270,
   },
 
   /* Departures: the rustle. */
@@ -51,14 +51,14 @@ export const TUNING_PARAMS = {
     max: 20,
     step: 0.25,
     unit: '/s',
-    value: 3.25,
+    value: 6,
   },
   departureShare: {
     label: 'Share of departures heard',
     min: 0,
     max: 1,
     step: 0.01,
-    value: 0.87,
+    value: 1,
   },
   departureGain: { label: 'Level', min: 0, max: 1, step: 0.01, value: 0.09 },
   departurePan: { label: 'Stereo width', min: 0, max: 1, step: 0.01, value: 0.52 },
@@ -79,66 +79,66 @@ export const TUNING_PARAMS = {
     unit: '×',
     value: 1.3,
   },
-  departureAttack: { label: 'Attack', min: 1, max: 1000, step: 1, unit: 'ms', value: 389 },
-  departureDecay: { label: 'Decay', min: 10, max: 3000, step: 5, unit: 'ms', value: 840 },
-  departureFlutter: { label: 'Fabric flutter', min: 0, max: 20, step: 0.5, value: 0.5 },
-  departureRubHz: { label: 'Rub speed', min: 1, max: 40, step: 0.5, unit: 'Hz', value: 29.5 },
-  departureRubDepth: { label: 'Rub depth', min: 0, max: 1, step: 0.01, value: 0.22 },
+  departureAttack: { label: 'Attack', min: 1, max: 1000, step: 1, unit: 'ms', value: 778 },
+  departureDecay: { label: 'Decay', min: 10, max: 3000, step: 5, unit: 'ms', value: 1910 },
+  departureFlutter: { label: 'Fabric flutter', min: 0, max: 20, step: 0.5, value: 0 },
+  departureRubHz: { label: 'Rub speed', min: 1, max: 80, step: 0.5, unit: 'Hz', value: 40 },
+  departureRubDepth: { label: 'Rub depth', min: 0, max: 1, step: 0.01, value: 0 },
 
   /* Per-play variation of both cues' filter, attack and decay. */
-  driftStep: { label: 'Drift per cue', min: 0, max: 10, step: 0.1, unit: '%', value: 2 },
-  driftLimit: { label: 'Drift limit', min: 0, max: 50, step: 0.5, unit: '%', value: 10 },
+  driftStep: { label: 'Drift per cue', min: 0, max: 10, step: 0.1, unit: '%', value: 7.4 },
+  driftLimit: { label: 'Drift limit', min: 0, max: 50, step: 0.5, unit: '%', value: 24 },
 
   /* Reverb, from the smallest room (1 reader) to the largest (10,000+). */
-  rt60Small: { label: 'Tail, small room', min: 0.05, max: 5, step: 0.05, unit: 's', value: 0.15 },
-  rt60Large: { label: 'Tail, large room', min: 0.2, max: 20, step: 0.1, unit: 's', value: 13.2 },
+  rt60Small: { label: 'Tail, small room', min: 0.05, max: 5, step: 0.05, unit: 's', value: 0.65 },
+  rt60Large: { label: 'Tail, large room', min: 0.2, max: 30, step: 0.1, unit: 's', value: 20 },
   preDelaySmall: {
     label: 'Pre-delay, small room',
     min: 0,
-    max: 150,
+    max: 500,
     step: 1,
     unit: 'ms',
-    value: 1,
+    value: 14,
   },
   preDelayLarge: {
     label: 'Pre-delay, large room',
     min: 0,
-    max: 190,
+    max: 500,
     step: 1,
     unit: 'ms',
-    value: 119,
+    value: 190,
   },
-  wetSmall: { label: 'Return, small room', min: 0, max: 2, step: 0.01, value: 0.05 },
-  wetLarge: { label: 'Return, large room', min: 0, max: 2, step: 0.01, value: 1.38 },
+  wetSmall: { label: 'Return, small room', min: 0, max: 4, step: 0.01, value: 0.22 },
+  wetLarge: { label: 'Return, large room', min: 0, max: 4, step: 0.01, value: 2 },
   toneSmall: {
     label: 'Tail tone, small room',
     min: 300,
-    max: 12000,
+    max: 20000,
     step: 50,
     unit: 'Hz',
-    value: 8850,
+    value: 12000,
   },
   toneLarge: {
     label: 'Tail tone, large room',
     min: 300,
-    max: 12000,
+    max: 20000,
     step: 50,
     unit: 'Hz',
-    value: 8200,
+    value: 12000,
   },
-  reflectionsSmall: { label: 'Early reflections, small room', min: 0, max: 40, step: 1, value: 2 },
-  reflectionsLarge: { label: 'Early reflections, large room', min: 0, max: 40, step: 1, value: 17 },
+  reflectionsSmall: { label: 'Early reflections, small room', min: 0, max: 80, step: 1, value: 2 },
+  reflectionsLarge: { label: 'Early reflections, large room', min: 0, max: 80, step: 1, value: 40 },
 
   /* Room tone. */
-  bedGainSmall: { label: 'Level, small room', min: 0, max: 1, step: 0.005, value: 0.145 },
-  bedGainLarge: { label: 'Level, large room', min: 0, max: 1, step: 0.005, value: 0.175 },
+  bedGainSmall: { label: 'Level, small room', min: 0, max: 1, step: 0.005, value: 0.085 },
+  bedGainLarge: { label: 'Level, large room', min: 0, max: 1, step: 0.005, value: 0.24 },
   bedCutoffSmall: {
     label: 'Low-pass, small room',
     min: 40,
     max: 4000,
     step: 5,
     unit: 'Hz',
-    value: 545,
+    value: 555,
   },
   bedCutoffLarge: {
     label: 'Low-pass, large room',
@@ -146,7 +146,7 @@ export const TUNING_PARAMS = {
     max: 4000,
     step: 5,
     unit: 'Hz',
-    value: 520,
+    value: 945,
   },
   bedQ: { label: 'Low-pass Q', min: 0.1, max: 10, step: 0.05, value: 0.5 },
   bedPanDepthSmall: { label: 'Stereo drift, small room', min: 0, max: 1, step: 0.01, value: 0.2 },
@@ -253,13 +253,20 @@ export function changedTuning(tuning: Tuning): Partial<Tuning> {
 
 const STORAGE_KEY = 'ambient-copresence-audio:tuning'
 
-/** Defaults overlaid with this browser's saved tuning, if any. */
+/**
+ * Saved tuning is tied to the defaults it was made against. When new defaults are baked in,
+ * older saved tuning is dropped so every browser hears them.
+ */
+const DEFAULTS_ID = JSON.stringify(defaultTuning())
+
+/** Defaults overlaid with this browser's saved tuning, if it was made against them. */
 export function loadTuning(): Tuning {
   const tuning = defaultTuning()
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
+    if (saved?.defaults !== DEFAULTS_ID) return tuning
     for (const key of Object.keys(tuning) as TuningKey[]) {
-      if (typeof saved[key] === 'number') tuning[key] = saved[key]
+      if (typeof saved.values?.[key] === 'number') tuning[key] = saved.values[key]
     }
   } catch {
     /* No storage, or nothing valid saved: use the defaults. */
@@ -269,9 +276,12 @@ export function loadTuning(): Tuning {
 
 export function saveTuning(tuning: Tuning) {
   try {
-    const changed = changedTuning(tuning)
-    if (Object.keys(changed).length) localStorage.setItem(STORAGE_KEY, JSON.stringify(changed))
-    else localStorage.removeItem(STORAGE_KEY)
+    const values = changedTuning(tuning)
+    if (Object.keys(values).length) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ defaults: DEFAULTS_ID, values }))
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+    }
   } catch {
     /* Storage unavailable: tuning lasts until reload. */
   }

@@ -215,7 +215,8 @@ export function createRoomSound(tuning: Tuning): RoomSound {
 
   /* Reverb: pre-delay → two convolvers (crossfaded) → wet return. */
   const reverbIn = ctx.createGain()
-  const preDelay = ctx.createDelay(0.2)
+  // Room for the pre-delay slider's 500 ms maximum.
+  const preDelay = ctx.createDelay(0.5)
   preDelay.delayTime.value = t.preDelaySmall / 1000
   const wet = ctx.createGain()
   wet.gain.value = t.wetSmall

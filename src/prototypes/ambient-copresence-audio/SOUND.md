@@ -21,17 +21,17 @@ tide and badge (`PresenceTide.vue`), imported from that folder. It adds sound.
   on a quiet page (±0.2) and swinging fully left to right on a busy one (±1.0). Their cutoff
   and level wobble too (±105 Hz, ±29%), so the bed never settles. It stays dry (no reverb).
 - **Someone arrives:** a short tick-like crunch at a random spot across 80% of the stereo
-  field. It's a sparse scatter of tiny crackles (160 a second), band-passed around 3.9 kHz
-  (Q 1.25), with a 6 ms attack and a 60 ms decay. Level 0.15.
-- **Someone leaves:** a long, soft, dull rustle across 52% of the stereo field. It's noise with
-  a fast 29.5 Hz rub (depth 0.22) and almost no flutter, band-passed around 515 Hz (Q 0.8)
-  and low-passed at 1.3× that. It has a 389 ms attack and an 840 ms decay. Level 0.09.
+  field. It's a sparse scatter of tiny crackles (270 a second), band-passed around 3.9 kHz
+  (Q 1.25), with a 6 ms attack and a 90 ms decay. Level 0.15.
+- **Someone leaves:** a slow, soft swell of dull noise across 52% of the stereo field, with no
+  flutter or rub. It's band-passed around 515 Hz (Q 0.8) and low-passed at 1.3× that. It has a
+  778 ms attack and a 1.9 s decay. Level 0.09.
 - **The room:** every cue runs through a stereo reverb. Its size follows the crowd.
 
 Each cue plays one of 8 pre-rendered textures. Filters and the envelope (linear attack,
 exponential decay) are applied live. Every time a cue fires, its filter frequency, attack
-and decay each drift by a random 0–2% up or down. They're clamped to ±10% of the baseline
-above. Arrivals and departures drift separately. Level varies by up to −10%.
+and decay each drift by a random 0–7.4% up or down. They're clamped to ±24% of the baseline
+above. Arrivals and departures drift separately. Level varies by up to −24%.
 
 The master level is 0.81.
 
@@ -42,24 +42,26 @@ Room size is `log10(1 + readers) / log10(10,001)`, the same scale as the tide's 
 
 | Room size          | 0 (1 reader) | 1 (10,000+) |
 | ------------------ | ------------ | ----------- |
-| Reverb tail (RT60) | 0.15 s       | 13.2 s      |
-| Pre-delay          | 1 ms         | 119 ms      |
-| Reverb return      | 0.05         | 1.38        |
-| Tail tone          | 8,850 Hz     | 8,200 Hz    |
-| Early reflections  | 2 in 8 ms    | 17 in 60 ms |
-| Room tone level    | 0.145        | 0.175       |
-| Room tone cutoff   | 545 Hz       | 520 Hz      |
+| Reverb tail (RT60) | 0.65 s       | 20 s        |
+| Pre-delay          | 14 ms        | 190 ms      |
+| Reverb return      | 0.22         | 2           |
+| Tail tone          | 12,000 Hz    | 12,000 Hz   |
+| Early reflections  | 2 in 8 ms    | 40 in 60 ms |
+| Room tone level    | 0.085        | 0.24        |
+| Room tone cutoff   | 555 Hz       | 945 Hz      |
 | Room tone drift    | ±0.2 pan     | ±1.0 pan    |
 
-Almost dry with a very short tail when few people are reading; a long, wet hall (13 s
-tail) when the page is packed.
+A small, fairly dry room when few people are reading; a vast, bright, very wet hall (20 s
+tail, reverb louder than the dry sound) when the page is packed. The room tone also gets
+louder and brighter as the crowd grows.
 
 A reverb's impulse response can't morph. Room size moves in 10 steps: each new step loads
 into a second convolver, which crossfades in over 2.5 s. Swaps are at least 3 s apart.
 Pre-delay, return and room tone glide continuously.
 
 **Cue thinning.** Arrivals and departures are tracked as smoothed rates (2 s time constant).
-Only 87% of departures ever play. When a rate is above 29 arrivals/s or 3.25 departures/s, each event plays with probability
+Every departure can play. When a rate is above 40 arrivals/s or 6 departures/s, each event
+plays with probability
 `max ÷ rate`, so each cue stands for several readers. Cues land at random points inside each
 200 ms tick, not on the tick grid. Quiet pages hear every arrival; Christa Pike at peak, or
 any page in time-lapse, is a steady patter of crunches with the odd rustle. The readers
@@ -67,7 +69,7 @@ already present on load (the backfill) make no sound.
 
 ## Tuning by ear
 
-The numbers above are the defaults in `tuning.ts`, tuned by ear on Nov 3, 2026. The settings button, left of the sound
+The numbers above are the defaults in `tuning.ts`, last tuned by ear on Nov 3, 2026. The settings button, left of the sound
 toggle, opens a bottom sheet with a slider for every value, grouped into Arrivals,
 Departures, Variation, Reverb, Room tone and Output. It also has a Room sound switch, since
 the sheet covers the toggle.
@@ -81,7 +83,8 @@ the sheet covers the toggle.
 - **Copy changes** copies only the changed values as JSON, ready to paste back as new
   defaults. **Reset** returns everything to the defaults.
 - Tuning is saved in this browser (`localStorage`) and survives reloads. Other browsers and
-  devices hear the defaults.
+  devices hear the defaults. When new defaults are baked in, saved tuning from before is
+  dropped.
 
 ## Starting
 
