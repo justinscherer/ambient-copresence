@@ -313,7 +313,6 @@ export function createRoomSound(tuning: Tuning): RoomSound {
       // Web Audio reads a low-pass Q in dB.
       filter.Q.value = 20 * Math.log10(t.bedQ)
       pan.rate.value = voice.pan * t.bedDriftSpeed
-      pan.depth.value = voice.panSign * t.bedPanDepth
       cutoff.rate.value = voice.cutoff * t.bedDriftSpeed
       cutoff.depth.value = t.bedCutoffWobble
       level.rate.value = voice.level * t.bedDriftSpeed
@@ -321,6 +320,8 @@ export function createRoomSound(tuning: Tuning): RoomSound {
     }
   }
   tuneBed()
+  // Stereo drift follows room size (see tuneRoom); start at the small room's.
+  for (const { voice, pan } of bedVoices) pan.depth.value = voice.panSign * t.bedPanDepthSmall
   let bedStarted = false
 
   /* ---------------------------------------------------------------------------------------
@@ -481,7 +482,12 @@ export function createRoomSound(tuning: Tuning): RoomSound {
     wet.gain.setTargetAtTime(lerp(t.wetSmall, t.wetLarge, size), now, glide)
     bed.gain.setTargetAtTime(lerp(t.bedGainSmall, t.bedGainLarge, size), now, glide)
     const cutoff = expLerp(t.bedCutoffSmall, t.bedCutoffLarge, size)
-    for (const { filter } of bedVoices) filter.frequency.setTargetAtTime(cutoff, now, glide)
+    // A quiet page's room tone barely moves; a busy page's swings across the stereo field.
+    const panDepth = lerp(t.bedPanDepthSmall, t.bedPanDepthLarge, size)
+    for (const { voice, filter, pan } of bedVoices) {
+      filter.frequency.setTargetAtTime(cutoff, now, glide)
+      pan.depth.setTargetAtTime(voice.panSign * panDepth, now, glide)
+    }
   }
 
   /** Load the response for room step `next` into the idle convolver and crossfade to it. */

@@ -17,7 +17,8 @@ tide and badge (`PresenceTide.vue`), imported from that folder. It adds sound.
 ## What you hear
 
 - **Room tone:** two decorrelated loops of low-passed pink noise. Each drifts slowly around the
-  stereo field, in opposite directions at different rates (~0.03 and ~0.05 Hz). Their cutoff
+  stereo field, in opposite directions at different rates (~0.03 and ~0.05 Hz), barely moving
+  on a quiet page (±0.2) and swinging fully left to right on a busy one (±1.0). Their cutoff
   and level wobble too (±105 Hz, ±29%), so the bed never settles. It stays dry (no reverb).
 - **Someone arrives:** a short tick-like crunch at a random spot across 80% of the stereo
   field. It's a sparse scatter of tiny crackles (160 a second), band-passed around 3.9 kHz
@@ -48,6 +49,7 @@ Room size is `log10(1 + readers) / log10(10,001)`, the same scale as the tide's 
 | Early reflections  | 2 in 8 ms    | 17 in 60 ms |
 | Room tone level    | 0.145        | 0.175       |
 | Room tone cutoff   | 545 Hz       | 520 Hz      |
+| Room tone drift    | ±0.2 pan     | ±1.0 pan    |
 
 Almost dry with a very short tail when few people are reading; a long, wet hall (13 s
 tail) when the page is packed.
