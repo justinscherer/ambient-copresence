@@ -61,6 +61,8 @@ export function usePresenceSimulation(article: Ref<ArticleTraffic | undefined>) 
   const dotScale = ref(1)
   const joinedRecently = ref(0)
   const leftRecently = ref(0)
+  /** Arrivals and departures in the latest tick (a new object every tick). */
+  const lastChange = shallowRef({ joined: 0, left: 0 })
 
   let readers: Reader[] = []
   let nextId = 1
@@ -163,7 +165,9 @@ export function usePresenceSimulation(article: Ref<ArticleTraffic | undefined>) 
       clock.value.dayIndex = (clock.value.dayIndex + 1) % DAYS_IN_MONTH
     }
     simSeconds = target % 86400
-    recent.push({ at: realNow, joined, left: before - readers.length })
+    const left = before - readers.length
+    recent.push({ at: realNow, joined, left })
+    lastChange.value = { joined, left }
     publish()
   }
 
@@ -194,6 +198,7 @@ export function usePresenceSimulation(article: Ref<ArticleTraffic | undefined>) 
     dotScale,
     joinedRecently,
     leftRecently,
+    lastChange,
     expectedNow,
     setTime,
     setSpeed,

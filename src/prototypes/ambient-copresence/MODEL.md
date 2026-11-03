@@ -90,3 +90,19 @@ const {
 - **Regional mixes and topic tilts are judgment calls.** Public pageview data has no
   per-article geography.
 - **Spikes step at UTC midnight.** Daily data can't say what hour the news broke.
+
+## On the page
+
+`PresenceTide.vue` draws the crowd as a `--background-color-progressive-subtle` oval rising
+from the bottom of the screen, behind the article. Its size is log10(readers), with full
+size at 10,000 readers. It eases toward the live count (critically damped, ~4 s), and each
+tick's net arrivals or departures nudge it out or in. With reduced motion it eases slowly
+and skips the nudges.
+
+Testing hooks until there's a time UI:
+
+- `?day=1..31` picks the October day.
+- `?hour=0..24` picks the UTC hour.
+- `?speed=1800` runs a time-lapse (simulated seconds per real second).
+
+For example: `/ambient-copresence?title=Christa+Pike&day=1&hour=12&speed=1800`.
