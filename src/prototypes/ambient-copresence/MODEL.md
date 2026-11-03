@@ -93,11 +93,27 @@ const {
 
 ## On the page
 
-`PresenceTide.vue` draws the crowd as a `--background-color-progressive-subtle` oval rising
-from the bottom of the screen, behind the article. Its size is log10(readers), with full
-size at 10,000 readers. It eases toward the live count (critically damped, ~4 s), and each
-tick's net arrivals or departures nudge it out or in. With reduced motion it eases slowly
-and skips the nudges.
+`PresenceTide.vue` draws the crowd two ways from one anchor at the bottom of the screen.
+
+- **Tide**, behind the article: a `--background-color-progressive-subtle` radial-gradient oval
+  centred on the viewport's bottom edge, so only its top half (a dome) shows. Dome height is
+  8vh at 1 reader and 60vh at 10,000+, on a log10 scale. The oval is 1.6× wider than tall.
+  It eases toward the live count (critically damped, ~4 s), and each tick's net arrivals or
+  departures nudge it out or in.
+- **Badge**, over the article: an opaque `--background-color-interactive` half circle sitting
+  flat on the bottom edge, exactly 2:1 so it's symmetrical.
+  - It has a `--border-color-subtle` border on the curve and Codex's large shadow geometry in
+    `--background-color-progressive-subtle`.
+  - Two centred lines: the count in the Heading 2 style, and "reading" in Body style with
+    `--color-neutral`. Both use `--line-height-x-small` (20px) so they sit tight together.
+  - Its size is computed from the label so the curve passes 12px (`--spacing-75`) from the
+    text's top corners, with 12px below the text. With four-digit counts it's about 143×71px.
+
+Scrolling up collapses the tide into the badge, tracking the scroll 1:1, so it collapses as
+fast as you scroll. 160px of upward scroll is a full collapse, and 160px of downward scroll
+fully undoes it. 500ms after scrolling stops (momentum included), the badge sinks and the
+tide blooms back over 1.8 s, about 1.8 s from stopping to the badge being gone. With reduced
+motion the tide eases slowly, skips the nudges, and fades instead of shrinking and blooming.
 
 Testing hooks until there's a time UI:
 
